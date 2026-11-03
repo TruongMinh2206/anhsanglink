@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ảnh sang Link URL</title>
+<style>
+  :root {
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --text: #1c2130;
+    --muted: #6b7280;
+    --border: #e3e7ee;
+    --accent: #2f6fed;
+    --accent-dark: #2459c4;
+    --ok: #15803d;
+    --ok-bg: #ecfdf3;
+    --err: #b91c1c;
+    --err-bg: #fef2f2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  label { font-weight: 600; font-size: 14px; display: block; margin-bottom: 6px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  input[type="text"], input[type="password"] {
+    flex: 1; min-width: 220px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .hint a { color: var(--accent); }
+  button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s;
+  }
+  button:hover { background: var(--accent-dark); }
+  button:disabled { background: #b8c4dc; cursor: not-allowed; }
+  button.ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+  button.ghost:hover { background: #eef3ff; }
+  button.sm { padding: 6px 10px; font-size: 13px; }
+
+  .drop {
+    border: 2px dashed #c3cde0;
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .15s;
+    background: #fafbfe;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: #eef3ff; }
+  .drop .icon { font-size: 40px; margin-bottom: 8px; }
+  .drop p { margin: 4px 0; }
+  .drop .small { color: var(--muted); font-size: 13px; }
+  #fileInput { display: none; }
+
+  .toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+  }
+  .toolbar h2 { font-size: 16px; margin: 0; }
+
+  .item {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 14px;
+    padding: 14px 0;
+    border-top: 1px solid var(--border);
+  }
+  .item:first-child { border-top: none; padding-top: 0; }
+  .thumb {
+    width: 72px; height: 72px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #f1f3f7;
+  }
+  .meta { min-width: 0; }
+  .fname {
+    font-weight: 600; font-size: 14px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fsize { color: var(--muted); font-size: 12px; }
+  .status { font-size: 13px; margin-top: 4px; }
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); }
+  .bar {
+    height: 6px; background: #e8ecf3; border-radius: 4px; overflow: hidden; margin-top: 8px;
+  }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .bar.indeterminate > div {
+    width: 40%;
+    animation: slide 1.1s infinite ease-in-out;
+  }
+  @keyframes slide {
+    0% { margin-left: -40%; }
+    100% { margin-left: 100%; }
+  }
+  .linkrow { display: flex; gap: 8px; margin-top: 8px; }
+  .linkrow input {
+    flex: 1; min-width: 0;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: #f7f9fc;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .extra { margin-top: 6px; font-size: 12px; }
+  .extra a { color: var(--muted); margin-right: 12px; }
+
+  .empty { color: var(--muted); text-align: center; padding: 24px 0; font-size: 14px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #1c2130; color: #fff; padding: 10px 18px; border-radius: 8px;
+    font-size: 14px; opacity: 0; pointer-events: none; transition: all .2s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; background: #eef3ff; color: var(--accent);
+  }
+  @media (max-width: 520px) {
+    .item { grid-template-columns: 56px 1fr; }
+    .thumb { width: 56px; height: 56px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ảnh sang Link URL</h1>
+  <p class="sub">Kéo thả ảnh vào, nhận ngay link public dùng được ở mọi nơi (host bởi ImgBB).</p>
+
+  <div class="card">
+    <div class="drop" id="drop">
+      <div class="icon">🖼️</div>
+      <p><b>Kéo thả ảnh vào đây</b> hoặc bấm để chọn</p>
+      <p class="small">Chọn được nhiều ảnh cùng lúc · JPG, PNG, GIF, WEBP, BMP · tối đa 32 MB/ảnh · Có thể dán ảnh bằng Ctrl+V</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <h2>Kết quả <span class="badge" id="count">0</span></h2>
+      <div class="row">
+        <button class="ghost sm" id="copyAll" type="button" disabled>Sao chép tất cả link</button>
+        <button class="ghost sm" id="copyAllImage" type="button" disabled>Sao chép tất cả =IMAGE</button>
+        <button class="ghost sm" id="clearAll" type="button" disabled>Xoá danh sách</button>
+      </div>
+    </div>
+    <div id="list"><div class="empty">Chưa có ảnh nào được tải lên.</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('fileInput');
+  const list = document.getElementById('list');
+  const countEl = document.getElementById('count');
+  const copyAll = document.getElementById('copyAll');
+  const copyAllImage = document.getElementById('copyAllImage');
+  const clearAll = document.getElementById('clearAll');
+  const toastEl = document.getElementById('toast');
+
+  const results = []; // { url, name }
+  let toastTimer;
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(() => toast('Đã sao chép!'));
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('Đã sao chép!'); }
+    catch (e) { toast('Không sao chép được, hãy copy thủ công.'); }
+    document.body.removeChild(ta);
+    return Promise.resolve();
+  }
+
+  const API_KEY = 'cf570561ee93a5409f32374ed58db1cc';
+  function getKey() { return API_KEY; }
+
+  // ---- Input events ----
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    handleFiles(fileInput.files);
+    fileInput.value = '';
+  });
+
+  ['dragenter', 'dragover'].forEach(ev =>
+    drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev =>
+    drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+
+  document.addEventListener('paste', e => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    const files = [];
+    for (const it of items) {
+      if (it.kind === 'file' && it.type.startsWith('image/')) {
+        const f = it.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) handleFiles(files);
+  });
+
+  function formatSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  function handleFiles(fileList) {
+    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+    if (!files.length) { toast('Không có tệp ảnh hợp lệ.'); return; }
+    const key = getKey();
+    if (!key) return;
+
+    if (list.querySelector('.empty')) list.innerHTML = '';
+    files.forEach(f => uploadOne(f, key));
+  }
+
+  function uploadOne(file, key) {
+    const item = document.createElement('div');
+    item.className = 'item';
+
+    const thumb = document.createElement('img');
+    thumb.className = 'thumb';
+    thumb.alt = '';
+    thumb.src = URL.createObjectURL(file);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.innerHTML =
+      '<div class="fname" title="' + escapeHtml(file.name) + '">' + escapeHtml(file.name) + '</div>' +
+      '<div class="fsize">' + formatSize(file.size) + '</div>' +
+      '<div class="status">Đang tải lên…</div>' +
+      '<div class="bar"><div></div></div>';
+
+    item.appendChild(thumb);
+    item.appendChild(meta);
+    list.prepend(item);
+
+    const statusEl = meta.querySelector('.status');
+    const barWrap = meta.querySelector('.bar');
+    const bar = barWrap.firstElementChild;
+
+    if (file.size > 32 * 1024 * 1024) {
+      fail('Ảnh vượt quá 32 MB (giới hạn của ImgBB).');
+      return;
+    }
+
+    const form = new FormData();
+    form.append('image', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://api.imgbb.com/1/upload?key=' + encodeURIComponent(key));
+
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        const pct = Math.round(e.loaded / e.total * 100);
+        bar.style.width = pct + '%';
+        statusEl.textContent = 'Đang tải lên… ' + pct + '%';
+        if (pct >= 100) {
+          statusEl.textContent = 'Đang xử lý…';
+          barWrap.classList.add('indeterminate');
+        }
+      }
+    };
+
+    xhr.onload = () => {
+      let data;
+      try { data = JSON.parse(xhr.responseText); } catch (e) {}
+      if (xhr.status === 200 && data && data.success) {
+        success(data.data);
+      } else {
+        const msg = (data && data.error && data.error.message) || ('Lỗi HTTP ' + xhr.status);
+        fail(msg);
+      }
+    };
+    xhr.onerror = () => fail('Lỗi mạng. Kiểm tra kết nối hoặc API key.');
+    xhr.send(form);
+
+    function success(d) {
+      barWrap.remove();
+      statusEl.className = 'status ok';
+      statusEl.textContent = 'Thành công';
+
+      const url = d.url;
+      results.push({ url, name: file.name });
+      updateCount();
+
+      const linkrow = document.createElement('div');
+      linkrow.className = 'linkrow';
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.readOnly = true;
+      inp.value = url;
+      inp.addEventListener('click', () => inp.select());
+      const btn = document.createElement('button');
+      btn.className = 'sm';
+      btn.type = 'button';
+      btn.textContent = 'Sao chép';
+      btn.addEventListener('click', () => copyText(url));
+      linkrow.appendChild(inp);
+      linkrow.appendChild(btn);
+      meta.appendChild(linkrow);
+
+      const formula = '=IMAGE("' + url + '")';
+      const frow = document.createElement('div');
+      frow.className = 'linkrow';
+      const finp = document.createElement('input');
+      finp.type = 'text';
+      finp.readOnly = true;
+      finp.value = formula;
+      finp.title = 'Công thức dán vào ô Google Sheets / Excel';
+      finp.addEventListener('click', () => finp.select());
+      const fbtn = document.createElement('button');
+      fbtn.className = 'sm';
+      fbtn.type = 'button';
+      fbtn.textContent = 'Sao chép =IMAGE';
+      fbtn.addEventListener('click', () => copyText(formula));
+      frow.appendChild(finp);
+      frow.appendChild(fbtn);
+      meta.appendChild(frow);
+
+      const extra = document.createElement('div');
+      extra.className = 'extra';
+      extra.innerHTML =
+        '<a href="' + escapeHtml(d.url_viewer || url) + '" target="_blank" rel="noopener">Mở trang ảnh</a>' +
+        (d.thumb && d.thumb.url ? '<a href="' + escapeHtml(d.thumb.url) + '" target="_blank" rel="noopener">Thumbnail</a>' : '') +
+        (d.delete_url ? '<a href="' + escapeHtml(d.delete_url) + '" target="_blank" rel="noopener">Link xoá ảnh</a>' : '');
+      meta.appendChild(extra);
+    }
+
+    function fail(msg) {
+      barWrap.remove();
+      statusEl.className = 'status err';
+      statusEl.textContent = 'Lỗi: ' + msg;
+      const retry = document.createElement('button');
+      retry.className = 'ghost sm';
+      retry.type = 'button';
+      retry.textContent = 'Thử lại';
+      retry.style.marginTop = '6px';
+      retry.addEventListener('click', () => {
+        const k = getKey();
+        if (!k) return;
+        item.remove();
+        uploadOne(file, k);
+      });
+      meta.appendChild(retry);
+    }
+  }
+
+  function updateCount() {
+    countEl.textContent = results.length;
+    copyAll.disabled = results.length === 0;
+    copyAllImage.disabled = results.length === 0;
+    clearAll.disabled = list.children.length === 0 || !!list.querySelector('.empty');
+  }
+
+  copyAll.addEventListener('click', () => {
+    if (!results.length) return;
+    copyText(results.map(r => r.url).join('\n'));
+  });
+
+  copyAllImage.addEventListener('click', () => {
+    if (!results.length) return;
+    copyText(results.map(r => '=IMAGE("' + r.url + '")').join('\n'));
+  });
+
+  clearAll.addEventListener('click', () => {
+    results.length = 0;
+    list.innerHTML = '<div class="empty">Chưa có ảnh nào được tải lên.</div>';
+    updateCount();
+  });
+
+  // enable clear button when items appear
+  const obs = new MutationObserver(updateCount);
+  obs.observe(list, { childList: true });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+})();
+</script>
+</body>
+</html>
